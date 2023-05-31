@@ -12,7 +12,20 @@ func roundFloat(val float64, precision uint) float64 {
 	ratio := math.Pow(10, float64(precision))
 	return math.Round(val*ratio) / ratio
 }
+func strToTimeObject(newLayout string, start, end, check string) (time.Time, time.Time, time.Time) {
+	tcheck, _ := time.Parse(newLayout, check)
+	tstart, _ := time.Parse(newLayout, start)
+	tend, _ := time.Parse(newLayout, end)
+	return tstart, tend, tcheck
+}
+func priceCalculator(watts float64, price float64) float64 {
+	KwH := watts * 0.5 / 1000
+	KwH = roundFloat(KwH, 4)
+	KwH = KwH * price
+	return roundFloat(KwH, 4)
+	//return KwH
 
+}
 func inTimeSpan(start, end, check time.Time) bool {
 	if start.Before(end) {
 		return !check.Before(start) && !check.After(end)
@@ -66,33 +79,21 @@ func main() {
 		watts, _ = strconv.ParseFloat(truc, 64)
 		tm, _ := time.Parse(time.RFC3339, datetime)
 		mytime := (tm.Format("15:04"))
-		t.start, t.end, t.check = hcreuses_hours[0], hcreuses_hours[1], mytime
-		check, _ := time.Parse(newLayout, t.check)
-		start, _ := time.Parse(newLayout, t.start)
-		end, _ := time.Parse(newLayout, t.end)
+		start, end, check := strToTimeObject(newLayout, hcreuses_hours[0], hcreuses_hours[1], mytime)
 		if inTimeSpan(start, end, check) {
-			KwH := watts * 0.5 / 1000
-			KwH = roundFloat(KwH, 4)
-
-			KwH = KwH * prices_hcreuses[0]
-			KwH = roundFloat(KwH, 4)
+			KwH := priceCalculator(watts, prices_hcreuses[0])
+			fmt.Println(KwH)
 			values = append(values, KwH)
 		} else {
 			t.start, t.end, t.check = hcreuses_hours[2], hcreuses_hours[3], mytime
-			check, _ := time.Parse(newLayout, t.check)
-			start, _ := time.Parse(newLayout, t.start)
-			end, _ := time.Parse(newLayout, t.end)
+			start, end, check := strToTimeObject(newLayout, hcreuses_hours[0], hcreuses_hours[1], mytime)
 			if inTimeSpan(start, end, check) {
-				KwH := watts * 0.5 / 1000
-				KwH = roundFloat(KwH, 4)
-				KwH = KwH * prices_hcreuses[0]
-				KwH = roundFloat(KwH, 4)
+				KwH := priceCalculator(watts, prices_hcreuses[0])
+				fmt.Println(KwH)
 				values = append(values, KwH)
 			} else {
-				KwH := watts * 0.5 / 1000
-				KwH = roundFloat(KwH, 4)
-				KwH = KwH * prices_hcreuses[1]
-				KwH = roundFloat(KwH, 4)
+				KwH := priceCalculator(watts, prices_hcreuses[1])
+				fmt.Println(KwH)
 				values = append(values, KwH)
 			}
 		}
