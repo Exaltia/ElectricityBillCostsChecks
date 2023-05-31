@@ -50,7 +50,7 @@ func main() {
 	//var peak_cost float32
 	var t Test
 	var truc string
-	var watts, final float64
+	var watts, hphcprice float64
 
 	//hcreuses array prices order are off-peak hours then peak hours
 	//tempo array prices order are : off-peak blue, white, red prices then peak blue, white, red
@@ -65,7 +65,7 @@ func main() {
 	*/
 	prices_hcreuses := [2]float64{0.2006, 0.2742}
 	//prices_tempo := [6]float32{0.0970, 0.1140, 0.1216, 0.1249, 0.1508, 0.6712}
-	//price_baseprice = 0.2062
+	//price_baseprice := 0.2062
 	hcreuses_hours := [4]string{"01:00", "07:00", "12:30", "13:30"}
 	//tempo_hours := [2]string{"22:00", "06:00"}
 
@@ -96,17 +96,17 @@ func main() {
 				fmt.Println(KwH)
 				values = append(values, KwH)
 			}
+			t.start, t.end = hcreuses_hours[2], hcreuses_hours[3]
 		}
-		t.start, t.end = hcreuses_hours[2], hcreuses_hours[3]
 
 	}
 	for i := 0; i < len(values); i++ {
-		final = final + values[i]
+		hphcprice = hphcprice + values[i]
 	}
 
 	//Todo : add a debug function
 
-	final = roundFloat(final, 2)
-	fmt.Println(final)
+	hphcprice = roundFloat(hphcprice, 2)
+	fmt.Println(hphcprice)
 
 }
