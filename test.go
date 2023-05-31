@@ -37,6 +37,7 @@ func inTimeSpan(start, end, check time.Time) bool {
 }
 
 var values []float64
+var basepricesvalues []float64
 
 type Test struct {
 	start string
@@ -50,7 +51,7 @@ func main() {
 	//var peak_cost float32
 	var t Test
 	var truc string
-	var watts, hphcprice float64
+	var watts, hphcprice, baseprices float64
 
 	//hcreuses array prices order are off-peak hours then peak hours
 	//tempo array prices order are : off-peak blue, white, red prices then peak blue, white, red
@@ -58,14 +59,12 @@ func main() {
 	//tempo_hours have only one interval, wich is the offpeak hours, outside this interval is peak hours
 
 	/*
-		TODO: prices from edf doesn't include electricity transport cost, wich is almost
-		hidden in your annual bill, and make all cost calculation wrong if you don't add
-		it
-		So, the real todo is to add a flexible value with those transport electricity cost and TVA
+		TODO : i'm still not sure why, but despite EDF telling the prices are Tax included, if i don't add tak again,
+		prices are wrong. still need to find a way to add flexible tax rate
 	*/
 	prices_hcreuses := [2]float64{0.2006, 0.2742}
 	//prices_tempo := [6]float32{0.0970, 0.1140, 0.1216, 0.1249, 0.1508, 0.6712}
-	//price_baseprice := 0.2062
+	price_baseprice := 0.2062
 	hcreuses_hours := [4]string{"01:00", "07:00", "12:30", "13:30"}
 	//tempo_hours := [2]string{"22:00", "06:00"}
 
@@ -82,31 +81,36 @@ func main() {
 		start, end, check := strToTimeObject(newLayout, hcreuses_hours[0], hcreuses_hours[1], mytime)
 		if inTimeSpan(start, end, check) {
 			KwH := priceCalculator(watts, prices_hcreuses[0])
-			fmt.Println(KwH)
 			values = append(values, KwH)
 		} else {
 			t.start, t.end, t.check = hcreuses_hours[2], hcreuses_hours[3], mytime
 			start, end, check := strToTimeObject(newLayout, hcreuses_hours[0], hcreuses_hours[1], mytime)
 			if inTimeSpan(start, end, check) {
 				KwH := priceCalculator(watts, prices_hcreuses[0])
-				fmt.Println(KwH)
 				values = append(values, KwH)
 			} else {
 				KwH := priceCalculator(watts, prices_hcreuses[1])
-				fmt.Println(KwH)
 				values = append(values, KwH)
 			}
 			t.start, t.end = hcreuses_hours[2], hcreuses_hours[3]
 		}
-
+		KwH := priceCalculator(watts, price_baseprice)
+		//fmt.Println(KwH)
+		basepricesvalues = append(basepricesvalues, KwH)
 	}
+	fmt.Println(basepricesvalues)
 	for i := 0; i < len(values); i++ {
 		hphcprice = hphcprice + values[i]
+	}
+	for i := 0; i < len(basepricesvalues); i++ {
+		baseprices = baseprices + basepricesvalues[i]
 	}
 
 	//Todo : add a debug function
 
 	hphcprice = roundFloat(hphcprice, 2)
 	fmt.Println(hphcprice)
+	baseprices = roundFloat(baseprices, 2)
+	fmt.Println(baseprices)
 
 }
