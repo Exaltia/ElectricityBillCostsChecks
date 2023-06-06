@@ -40,7 +40,7 @@ func inTimeSpan(start, end, check time.Time) bool {
 }
 
 var values []float64
-var basepricesvalues []float64
+var basepricesvalues, tempopricesvalues []float64
 var red_days_map = make(map[string]bool)
 var white_days_map = make(map[string]bool)
 var blue_days_map = make(map[string]bool)
@@ -72,17 +72,18 @@ func textfileread(textfilepath string) []string {
 }
 
 func main() {
+	calendar_format := string("2006-01-02")
 
 	//var off_peak_cost float32
 	//var peak_cost float32
 	var t Test
 	var truc string
-	var watts, hphcprice, baseprices float64
+	var watts, hphcprice, baseprices, tempoprices float64
 	textfilepath := [2]string{"red_days", "white_days"}
 	reds_days_tempo := textfileread(textfilepath[0])
 	white_days_tempo := textfileread(textfilepath[1])
-	fmt.Println(reds_days_tempo)
-	fmt.Println(white_days_tempo)
+	//fmt.Println(reds_days_tempo)
+	//fmt.Println(white_days_tempo)
 	//hcreuses array prices order are off-peak hours then peak hours
 	//tempo array prices order are : off-peak blue, white, red prices then peak blue, white, red
 	//hcreuses_hours have two intervals. order is start of the interval, then end, outside this interval, is peak hours
@@ -93,17 +94,17 @@ func main() {
 		prices are wrong. still need to find a way to add flexible tax rate
 	*/
 	prices_hcreuses := [2]float64{0.2006, 0.2742}
-	//prices_tempo := [6]float32{0.0970, 0.1140, 0.1216, 0.1249, 0.1508, 0.6712}
+	prices_tempo := [6]float64{0.0970, 0.1140, 0.1216, 0.1249, 0.1508, 0.6712}
 	price_baseprice := 0.2062
 	hcreuses_hours := [4]string{"01:00", "07:00", "12:30", "13:30"}
-	//tempo_hours := [2]string{"22:00", "06:00"}
+	tempo_hours := [2]string{"22:00", "06:00"}
 	for b := range reds_days_tempo {
 		red_days_map[reds_days_tempo[b]] = true
 	}
 	for b := range white_days_tempo {
 		white_days_map[white_days_tempo[b]] = true
 	}
-	fmt.Println(red_days_map)
+	//fmt.Println(red_days_map)
 	//Todo : array of dates of peak red tempo prices, as they are on specific days in addition of specific times
 	filepath := "Enedis_Conso_Heure_20220503-20230530_19119536803609.csv"
 	result := readCsvFile(filepath)
@@ -114,7 +115,12 @@ func main() {
 		watts, _ = strconv.ParseFloat(truc, 64)
 		tm, _ := time.Parse(time.RFC3339, datetime)
 		mytime := (tm.Format("15:04"))
+		dayonly := (tm.Format(calendar_format))
 		start, end, check := strToTimeObject(newLayout, hcreuses_hours[0], hcreuses_hours[1], mytime)
+		if !red_days_map[dayonly] || !white_days_map[dayonly] {
+			blue_days_map[dayonly] = true
+		}
+		//fmt.Println(blue_days_map)
 		if inTimeSpan(start, end, check) {
 			KwH := priceCalculator(watts, prices_hcreuses[0])
 			values = append(values, KwH)
@@ -133,20 +139,60 @@ func main() {
 		KwH := priceCalculator(watts, price_baseprice)
 		//fmt.Println(KwH)
 		basepricesvalues = append(basepricesvalues, KwH)
+		start, end, check = strToTimeObject(newLayout, tempo_hours[0], tempo_hours[1], mytime)
+		if red_days_map[dayonly] {
+			//fmt.Println("yes", dayonly)
+			if inTimeSpan(start, end, check) {
+				current_price := prices_tempo[2]
+				KwH := priceCalculator(watts, current_price)
+				tempopricesvalues = append(tempopricesvalues, KwH)
+			} else {
+				current_price := prices_tempo[5]
+				KwH := priceCalculator(watts, current_price)
+				tempopricesvalues = append(tempopricesvalues, KwH)
+			}
+
+		} else if white_days_map[dayonly] {
+			if inTimeSpan(start, end, check) {
+				current_price := prices_tempo[1]
+				KwH := priceCalculator(watts, current_price)
+				tempopricesvalues = append(tempopricesvalues, KwH)
+			} else {
+				current_price := prices_tempo[4]
+				KwH := priceCalculator(watts, current_price)
+				tempopricesvalues = append(tempopricesvalues, KwH)
+			}
+		} else if blue_days_map[dayonly] {
+			if inTimeSpan(start, end, check) {
+				current_price := prices_tempo[0]
+				KwH := priceCalculator(watts, current_price)
+				tempopricesvalues = append(tempopricesvalues, KwH)
+			} else {
+				current_price := prices_tempo[3]
+				KwH := priceCalculator(watts, current_price)
+				tempopricesvalues = append(tempopricesvalues, KwH)
+			}
+		}
+		//fmt.Println(tempopricesvalues)
 	}
 	//fmt.Println(basepricesvalues)
+
 	for i := 0; i < len(values); i++ {
 		hphcprice = hphcprice + values[i]
 	}
 	for i := 0; i < len(basepricesvalues); i++ {
 		baseprices = baseprices + basepricesvalues[i]
 	}
-
+	for i := 0; i < len(tempopricesvalues); i++ {
+		tempoprices = tempoprices + tempopricesvalues[i]
+	}
 	//Todo : add a debug function
 
 	hphcprice = roundFloat(hphcprice, 2)
-	fmt.Println(hphcprice)
+	fmt.Println("Tarif Heure pleine/Heure creuse", hphcprice)
 	baseprices = roundFloat(baseprices, 2)
-	fmt.Println(baseprices)
+	fmt.Println("Tarif base", baseprices)
+	tempoprices = roundFloat(tempoprices, 2)
+	fmt.Println("Tarif Tempo", tempoprices)
 
 }
