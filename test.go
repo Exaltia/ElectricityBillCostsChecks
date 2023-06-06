@@ -1,8 +1,11 @@
 package main
 
 import (
+	"bufio"
 	"fmt"
+	"log"
 	"math"
+	"os"
 	"strconv"
 	"strings"
 	"time"
@@ -38,11 +41,34 @@ func inTimeSpan(start, end, check time.Time) bool {
 
 var values []float64
 var basepricesvalues []float64
+var red_days_map = make(map[string]bool)
+var white_days_map = make(map[string]bool)
+var blue_days_map = make(map[string]bool)
 
 type Test struct {
 	start string
 	end   string
 	check string
+}
+
+func textfileread(textfilepath string) []string {
+	textfile := []string{}
+	file, err := os.Open(textfilepath)
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer file.Close()
+
+	scanner := bufio.NewScanner(file)
+	// optionally, resize scanner's capacity for lines over 64K, see next example
+	for scanner.Scan() {
+		textfile = append(textfile, scanner.Text())
+	}
+
+	if err := scanner.Err(); err != nil {
+		log.Fatal(err)
+	}
+	return textfile
 }
 
 func main() {
@@ -52,7 +78,11 @@ func main() {
 	var t Test
 	var truc string
 	var watts, hphcprice, baseprices float64
-
+	textfilepath := [2]string{"red_days", "white_days"}
+	reds_days_tempo := textfileread(textfilepath[0])
+	white_days_tempo := textfileread(textfilepath[1])
+	fmt.Println(reds_days_tempo)
+	fmt.Println(white_days_tempo)
 	//hcreuses array prices order are off-peak hours then peak hours
 	//tempo array prices order are : off-peak blue, white, red prices then peak blue, white, red
 	//hcreuses_hours have two intervals. order is start of the interval, then end, outside this interval, is peak hours
@@ -67,9 +97,15 @@ func main() {
 	price_baseprice := 0.2062
 	hcreuses_hours := [4]string{"01:00", "07:00", "12:30", "13:30"}
 	//tempo_hours := [2]string{"22:00", "06:00"}
-
+	for b := range reds_days_tempo {
+		red_days_map[reds_days_tempo[b]] = true
+	}
+	for b := range white_days_tempo {
+		white_days_map[white_days_tempo[b]] = true
+	}
+	fmt.Println(red_days_map)
 	//Todo : array of dates of peak red tempo prices, as they are on specific days in addition of specific times
-	filepath := "Enedis_Conso_Heure_20230522-20230523_19119536803609.csv"
+	filepath := "Enedis_Conso_Heure_20220503-20230530_19119536803609.csv"
 	result := readCsvFile(filepath)
 	newLayout := "15:04"
 	for i := 3; i < len(result); i++ {
@@ -98,7 +134,7 @@ func main() {
 		//fmt.Println(KwH)
 		basepricesvalues = append(basepricesvalues, KwH)
 	}
-	fmt.Println(basepricesvalues)
+	//fmt.Println(basepricesvalues)
 	for i := 0; i < len(values); i++ {
 		hphcprice = hphcprice + values[i]
 	}
